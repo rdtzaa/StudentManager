@@ -1,45 +1,107 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Data;
-using System.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using StudentManager.Models;
-using System.Security.Cryptography.Xml;
 
-namespace StudentManager.Data
+namespace StudentManager.Data;
+
+public class StudentRepository
 {
-    public class StudentRepository
-    {
-        private string connectionString =
-            @"Server=(localdb)\MSSQLLocalDB;
-                Database=StudentDB
-                Trusted_Connection=True;";
-        public List<Student> GetAll()
-        {
-            var students = new List<Student>();
-            string sql = "Select Id, NIM, Nama, Jurusan, Email " + "FROM Students ORDER BY NIM";
-            using var connection = new SqlConnection(connectionString);
-            using var command = new SqlCommand(sql, connection);
-            connection.Open();
+    private readonly string connectionString =
+        @"Server=(localdb)\MSSQLLocalDB;
+          Database=StudentDB;
+          Trusted_Connection=True;
+          TrustServerCertificate=True;";
 
-            using var reader = command.ExecuteReader();
-            while(reader.Read())
+    public List<Student> GetAll()
+    {
+        var students = new List<Student>();
+        using SqlConnection connection = new SqlConnection(connectionString);
+        string sql = "SELECT Id, NIM, Nama, Jurusan, Gender, Email " +
+                     "FROM Students ORDER BY Id DESC";
+        using SqlCommand command = new SqlCommand(sql, connection);
+        connection.Open();
+        using SqlDataReader reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            students.Add(new Student
             {
-                students.Add(new Student
-                {
-                    Id = (int)reader["Id"],
-                    NIM = reader["NIM"].ToString()!,
-                    Nama = reader["Nama"].ToString()!,
-                    Jurusan = reader["Reader"].ToString()!,
-                    Email = reader["Email"].ToString()!,
-                });
-            }
-            return students;
+                Id = Convert.ToInt32(reader["Id"]),
+                NIM = reader["NIM"].ToString()!,
+                Nama = reader["Nama"].ToString()!,
+                Jurusan = reader["Jurusan"].ToString()!,
+                Gender = reader["Gender"].ToString()!,
+                Email = reader["Email"].ToString()!
+            });
         }
+
+        return students;
     }
 
+    public void Insert(Student student)
+    {
+        using SqlConnection connection = new SqlConnection(connectionString);
+        string sql = "INSERT INTO Students (NIM, Nama, Jurusan, Gender, Email) " +
+                     "VALUES (@NIM, @Nama, @Jurusan, @Gender, @Email)";
+        using SqlCommand command = new SqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@NIM", student.NIM);
+        command.Parameters.AddWithValue("@Nama", student.Nama);
+        command.Parameters.AddWithValue("@Jurusan", student.Jurusan);
+        command.Parameters.AddWithValue("@Gender", student.Gender);
+        command.Parameters.AddWithValue("@Email", student.Email);
+        connection.Open();
+        command.ExecuteNonQuery();
+    }
+
+    public void Update(Student student)
+    {
+        using SqlConnection connection = new SqlConnection(connectionString);
+        string sql = "UPDATE Students SET NIM=@NIM, Nama=@Nama, " +
+                     "Jurusan=@Jurusan, Gender=@Gender, Email=@Email WHERE Id=@Id";
+        using SqlCommand command = new SqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@Id", student.Id);
+        command.Parameters.AddWithValue("@NIM", student.NIM);
+        command.Parameters.AddWithValue("@Nama", student.Nama);
+        command.Parameters.AddWithValue("@Jurusan", student.Jurusan);
+        command.Parameters.AddWithValue("@Gender", student.Gender);
+        command.Parameters.AddWithValue("@Email", student.Email);
+        connection.Open();
+        command.ExecuteNonQuery();
+    }
+
+    public void Delete(int id)
+    {
+        using SqlConnection connection = new SqlConnection(connectionString);
+        using SqlCommand command = new SqlCommand("DELETE FROM Students WHERE Id=@Id", connection);
+        command.Parameters.AddWithValue("@Id", id);
+        connection.Open();
+        command.ExecuteNonQuery();
+    }
+
+    public List<Student> Search(string keyword)
+    {
+        var students = new List<Student>();
+        using SqlConnection connection = new SqlConnection(connectionString);
+        string sql = "SELECT Id, NIM, Nama, Jurusan, Gender, Email " +
+                     "FROM Students WHERE NIM LIKE @Keyword " +
+                     "OR Nama LIKE @Keyword OR Jurusan LIKE @Keyword ORDER BY Id DESC";
+        using SqlCommand command = new SqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@Keyword", "%" + keyword + "%");
+        connection.Open();
+        using SqlDataReader reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            students.Add(new Student
+            {
+                Id = Convert.ToInt32(reader["Id"]),
+                NIM = reader["NIM"].ToString()!,
+                Nama = reader["Nama"].ToString()!,
+                Jurusan = reader["Jurusan"].ToString()!,
+                Gender = reader["Gender"].ToString()!,
+                Email = reader["Email"].ToString()!
+            });
+        }
+
+        return students;
+    }
 }
-
-
